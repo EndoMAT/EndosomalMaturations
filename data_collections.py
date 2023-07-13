@@ -26,6 +26,15 @@ import xarray as xr
 import nest_asyncio
 nest_asyncio.apply()
 
+try:
+    cfg = get_ipython().config
+    if len(cfg) > 0:
+        from tqdm.notebook import tqdm
+    else:
+        from tqdm import tqdm
+except:
+    from tqdm import tqdm
+
 pd.options.mode.chained_assignment = None
 
 # Location of experiment database (should rarely be changed)
@@ -351,34 +360,20 @@ def log_movies(*args, overwrite=False, **kwargs):
                 print(f"Error at {metadata['names']['experiment']}, {metadata['names']['movie']}: {e}")
 
 
-def iter_movies(expt_names=[]):
-    """ Iterate over all movies in database (or subset, if specified) in serial.
-    """
-    
-    # Load dict of all matching experiments
-    db_dict = load_database(expt_names)
-    for expt_name, expt_dict in db_dict.items():
-        for movie_name, movie_dict in expt_dict.items():
-            yield MultiChannelMovie(**movie_dict)
-
-
 def apply_movies(movies, func, *args, **kwargs):
     """ Apply function to all movies in database (or subset, if specified) in serial.
     """
     
     # Apply function to all matching experiments
     for movie in tqdm(movies, total=len(movies)):
-        try:
-            if isinstance(func, str):
-                if func == 'map_blocks':
-                    method = movie.map_blocks
-                elif func =='compute':
-                    method = movie.compute
-                method(*args, **kwargs)
-            else:
-                func(movie, *args, **kwargs)
-        except Exception as e:
-            print(f"Error: {e}.")
+        if isinstance(func, str):
+            if func == 'map_blocks':
+                method = movie.map_blocks
+            elif func =='compute':
+                method = movie.compute
+            method(*args, **kwargs)
+        else:
+            func(movie, *args, **kwargs)
 
             
 def save_csv(self, data_type, overwrite=True):
